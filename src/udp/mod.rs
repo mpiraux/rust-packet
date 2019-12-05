@@ -42,8 +42,14 @@ pub fn checksum<B: AsRef<[u8]>>(ip: &ip::Packet<B>, buffer: &[u8]) -> u16 {
 				.write_u16::<BigEndian>(buffer.len() as u16).unwrap();
 		}
 
-		ip::Packet::V6(ref _packet) => {
-			unimplemented!();
+		ip::Packet::V6(ref packet) => {
+			prefix[0 .. 16].copy_from_slice(&packet.source().octets());
+			prefix[16 .. 32].copy_from_slice(&packet.destination().octets());
+
+			Cursor::new(&mut prefix[32 ..])
+				.write_u32::<BigEndian>(buffer.len() as u32).unwrap();
+
+			prefix[39] = Protocol::Udp.into();
 		}
 	};
 
