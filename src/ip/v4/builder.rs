@@ -33,6 +33,7 @@ pub struct Builder<B: Buffer = buffer::Dynamic> {
 
 	options: bool,
 	payload: bool,
+	payload_size: usize,
 }
 
 impl<B: Buffer> Build<B> for Builder<B> {
@@ -54,6 +55,7 @@ impl<B: Buffer> Build<B> for Builder<B> {
 
 			options: false,
 			payload: false,
+			payload_size: 0,
 		})
 	}
 
@@ -173,6 +175,7 @@ impl<B: Buffer> Builder<B> {
 		for byte in value {
 			self.buffer.more(1)?;
 			*self.buffer.data_mut().last_mut().unwrap() = *byte;
+			self.payload_size += 1;
 		}
 
 		Ok(self)
@@ -181,10 +184,11 @@ impl<B: Buffer> Builder<B> {
 	fn prepare(&mut self) {
 		let offset = self.buffer.offset();
 		let length = self.buffer.length();
+		let payload_size = self.payload_size;
 
 		self.finalizer.add(move |out| {
 			// Set the version to 4 and the header length.
-			let header = length / 4;
+			let header = (length - payload_size) / 4;
 			out[offset] = (4 << 4) | header as u8;
 
 			// Calculate and write the total length of the packet.
